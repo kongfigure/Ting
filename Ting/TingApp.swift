@@ -11,7 +11,14 @@ import SwiftUI
 struct TingApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TabView {
+                SpeakView()
+                    .tabItem { Label("Speak", systemImage: "mic") }
+                LessonsView()
+                    .tabItem { Label("Lessons", systemImage: "book") }
+                WordsView()
+                    .tabItem { Label("Words", systemImage: "star") }
+            }
         }
     }
 }

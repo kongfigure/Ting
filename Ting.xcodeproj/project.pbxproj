@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		8407B7A630181E9F000F3D4D /* Ting.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ting.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		843A11C1301C5BB900B17C2C /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,6 +34,7 @@
 			isa = PBXGroup;
 			children = (
 				8407B7A830181E9F000F3D4D /* Ting */,
+				843A11C1301C5BB900B17C2C /* Secrets.xcconfig */,
 				8407B7A730181E9F000F3D4D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -127,6 +129,7 @@
 /* Begin XCBuildConfiguration section */
 		8407B7AF30181EA1000F3D4D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 843A11C1301C5BB900B17C2C /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -191,6 +194,7 @@
 		};
 		8407B7B030181EA1000F3D4D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 843A11C1301C5BB900B17C2C /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -256,6 +260,9 @@
 				DEVELOPMENT_TEAM = FP254J4KK2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TingInfo.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ting needs your mic to transcribe conversations";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Ting needs speech recognition to translate what you say";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +295,9 @@
 				DEVELOPMENT_TEAM = FP254J4KK2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TingInfo.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ting needs your mic to transcribe conversations";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Ting needs speech recognition to translate what you say";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

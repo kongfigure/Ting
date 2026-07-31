@@ -1,0 +1,13 @@
+# Secrets — never commit API keys
+Secrets.xcconfig
+
+# Build artifacts
+build/
+DerivedData/
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
