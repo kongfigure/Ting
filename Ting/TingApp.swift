@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct TingApp: App {
+    @StateObject private var store = LessonStore()
+
     var body: some Scene {
         WindowGroup {
             TabView {
@@ -21,6 +23,9 @@ struct TingApp: App {
                 StatsView()
                     .tabItem { Label("Stats", systemImage: "chart.bar") }
             }
+            .tint(Color.primaryAccent)
+            .fontDesign(.rounded)
+            .environmentObject(store)
         }
     }
 }

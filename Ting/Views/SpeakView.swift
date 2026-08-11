@@ -9,9 +9,11 @@ struct ChatMessage: Identifiable {
 }
 
 struct SpeakView: View {
+    @EnvironmentObject private var store: LessonStore
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @State private var messages: [ChatMessage] = []
     @State private var isTranslating = false
+    @State private var currentLessonID: UUID?
     private let apiService = ClaudeAPIService()
 
     var body: some View {
@@ -48,9 +50,10 @@ struct SpeakView: View {
                             if isTranslating {
                                 HStack {
                                     ProgressView()
+                                        .tint(Color.primaryAccent)
                                     Text("Translating…")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.textSecondary)
                                     Spacer()
                                 }
                                 .padding(.horizontal)
@@ -75,16 +78,26 @@ struct SpeakView: View {
                     Image(systemName: speechRecognizer.isRecording ? "mic.fill" : "mic")
                         .font(.system(size: 36))
                         .padding(22)
-                        .background(speechRecognizer.isRecording ? Color.red : Color.blue)
+                        .background(speechRecognizer.isRecording ? Color.accentDeep : Color.primaryAccent)
                         .foregroundColor(.white)
                         .clipShape(Circle())
-                        .shadow(radius: 4)
+                        .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                 }
                 .padding(.bottom, 12)
                 .disabled(isTranslating)
             }
+            .background(Color.appBackground)
             .navigationTitle("Speak")
-            .toolbar { TingHeader() }
+            .toolbar {
+                TingHeader()
+                ToolbarItem(placement: .topBarLeading) {
+                    if !messages.isEmpty {
+                        Button(action: startNewConversation) {
+                            Image(systemName: "plus.bubble")
+                        }
+                    }
+                }
+            }
         }
         .task {
             await speechRecognizer.requestPermissions()
@@ -102,6 +115,11 @@ struct SpeakView: View {
         } else {
             try? speechRecognizer.startRecording()
         }
+    }
+
+    private func startNewConversation() {
+        messages = []
+        currentLessonID = nil
     }
 
     private func finalizeAndTranslate() {
@@ -125,8 +143,26 @@ struct SpeakView: View {
                     romanization: result.romanization,
                     isMock: false
                 ))
+
+                let turn = ConversationTurn(
+                    id: UUID(),
+                    speaker: "user",
+                    originalText: spoken,
+                    translatedText: result.translatedText,
+                    romanization: result.romanization,
+                    timestamp: Date()
+                )
+                let lessonID = store.addTurn(
+                    turn,
+                    toLessonID: currentLessonID,
+                    category: result.category,
+                    language: "Cantonese"
+                )
+                currentLessonID = lessonID
+                store.addWords(result.notableWords, category: result.category, lessonID: lessonID)
             } catch {
-                // ⚠️ DEMO FALLBACK: shows canned fake data if the API fails
+                // ⚠️ DEMO FALLBACK: shows canned fake data if the API fails.
+                // Intentionally NOT saved to the store so real lessons stay real.
                 print("❌ Translate failed, using mock: \(error.localizedDescription)")
                 let mock = ClaudeAPIService.mockResult(for: spoken)
                 messages.append(ChatMessage(
@@ -155,7 +191,7 @@ struct ChatBubble: View {
                 if let romanization = message.romanization {
                     Text(romanization)
                         .font(.caption)
-                        .foregroundStyle(message.isUser ? .white.opacity(0.8) : .secondary)
+                        .foregroundStyle(message.isUser ? Color.white.opacity(0.8) : Color.textSecondary)
                 }
 
                 if message.isMock {
@@ -166,9 +202,10 @@ struct ChatBubble: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(message.isUser ? Color.blue : Color(.systemGray5))
-            .foregroundColor(message.isUser ? .white : .primary)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(message.isUser ? Color.primaryAccent : Color.cardBackground)
+            .foregroundColor(message.isUser ? .white : Color.textPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
 
             if !message.isUser { Spacer(minLength: 48) }
         }
@@ -177,4 +214,5 @@ struct ChatBubble: View {
 
 #Preview {
     SpeakView()
+        .environmentObject(LessonStore())
 }

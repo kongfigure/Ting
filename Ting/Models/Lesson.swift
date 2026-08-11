@@ -11,11 +11,11 @@ struct ConversationTurn: Codable, Identifiable {
 
 struct Lesson: Codable, Identifiable {
     let id: UUID
-    let title: String
-    let category: String
+    var title: String
+    var category: String
     let language: String
-    let turns: [ConversationTurn]
-    let starredWordIDs: [UUID]
+    var turns: [ConversationTurn]
+    var starredWordIDs: [UUID]
     let date: Date
 }
 
