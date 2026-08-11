@@ -1,11 +1,14 @@
 import Foundation
 import Combine
 
-// ⚠️ SIMPLIFIED: local JSON file in Documents instead of Firebase for now.
 @MainActor
 final class LessonStore: ObservableObject {
     @Published private(set) var lessons: [Lesson] = []
     @Published private(set) var words: [Word] = []
+
+    // Firestore when GoogleService-Info.plist is present; otherwise falls
+    // back to a local JSON file so the app still works without Firebase.
+    private let firebase: FirebaseService?
 
     private struct StoreData: Codable {
         var lessons: [Lesson]
@@ -18,7 +21,18 @@ final class LessonStore: ObservableObject {
     }()
 
     init() {
-        load()
+        if FirebaseService.isConfigured {
+            let service = FirebaseService()
+            firebase = service
+            service.startListening(
+                onLessons: { [weak self] in self?.lessons = $0 },
+                onWords: { [weak self] in self?.words = $0 }
+            )
+        } else {
+            firebase = nil
+            print("⚠️ Firebase not configured — using local JSON store")
+            loadLocal()
+        }
     }
 
     /// Appends a turn to the given lesson, or creates a new lesson if none exists yet.
@@ -26,7 +40,7 @@ final class LessonStore: ObservableObject {
     func addTurn(_ turn: ConversationTurn, toLessonID lessonID: UUID?, category: String, language: String) -> UUID {
         if let lessonID, let index = lessons.firstIndex(where: { $0.id == lessonID }) {
             lessons[index].turns.append(turn)
-            save()
+            persistLesson(lessons[index])
             return lessonID
         }
 
@@ -41,7 +55,7 @@ final class LessonStore: ObservableObject {
             date: Date()
         )
         lessons.append(lesson)
-        save()
+        persistLesson(lesson)
         return lesson.id
     }
 
@@ -59,11 +73,13 @@ final class LessonStore: ObservableObject {
                 category: category
             )
             words.append(word)
+            firebase?.saveWord(word)
             if let index = lessons.firstIndex(where: { $0.id == lessonID }) {
                 lessons[index].starredWordIDs.append(word.id)
+                persistLesson(lessons[index])
             }
         }
-        save()
+        if firebase == nil { saveLocal() }
     }
 
     // ⚠️ SIMPLIFIED: basic day-count streak. Counts consecutive calendar days
@@ -85,7 +101,15 @@ final class LessonStore: ObservableObject {
         return streak
     }
 
-    private func load() {
+    private func persistLesson(_ lesson: Lesson) {
+        if let firebase {
+            firebase.saveLesson(lesson)
+        } else {
+            saveLocal()
+        }
+    }
+
+    private func loadLocal() {
         guard let data = try? Data(contentsOf: fileURL) else { return }
         do {
             let stored = try JSONDecoder().decode(StoreData.self, from: data)
@@ -96,7 +120,7 @@ final class LessonStore: ObservableObject {
         }
     }
 
-    private func save() {
+    private func saveLocal() {
         do {
             let data = try JSONEncoder().encode(StoreData(lessons: lessons, words: words))
             try data.write(to: fileURL, options: .atomic)

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		84FB0001301F00010000AA01 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 84FB0003301F00030000AA03 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		8407B7A630181E9F000F3D4D /* Ting.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ting.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		843A11C1301C5BB900B17C2C /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
@@ -24,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84FB0001301F00010000AA01 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +72,7 @@
 			);
 			name = Ting;
 			packageProductDependencies = (
+				84FB0003301F00030000AA03 /* FirebaseFirestore */,
 			);
 			productName = Ting;
 			productReference = 8407B7A630181E9F000F3D4D /* Ting.app */;
@@ -96,6 +102,9 @@
 			);
 			mainGroup = 8407B79D30181E9F000F3D4D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				84FB0002301F00020000AA02 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8407B7A730181E9F000F3D4D /* Products */;
 			projectDirPath = "";
@@ -342,6 +351,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		84FB0002301F00020000AA02 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		84FB0003301F00030000AA03 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 84FB0002301F00020000AA02 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8407B79E30181E9F000F3D4D /* Project object */;
 }

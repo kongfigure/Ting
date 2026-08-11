@@ -8,17 +8,55 @@ struct ChatMessage: Identifiable {
     let isMock: Bool
 }
 
+// Locale verified against SFSpeechRecognizer.supportedLocales():
+// zh-HK = Cantonese (Hong Kong, traditional). yue-Hant-HK is NOT supported.
+enum InputLanguage: String, CaseIterable, Identifiable {
+    case english = "English"
+    case cantonese = "廣東話"
+
+    var id: String { rawValue }
+
+    var localeIdentifier: String {
+        switch self {
+        case .english: return "en-US"
+        case .cantonese: return "zh-HK"
+        }
+    }
+
+    var apiName: String {
+        switch self {
+        case .english: return "English"
+        case .cantonese: return "Cantonese"
+        }
+    }
+
+    var target: InputLanguage {
+        self == .english ? .cantonese : .english
+    }
+}
+
 struct SpeakView: View {
     @EnvironmentObject private var store: LessonStore
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @State private var messages: [ChatMessage] = []
     @State private var isTranslating = false
     @State private var currentLessonID: UUID?
+    @State private var inputLanguage: InputLanguage = .english
     private let apiService = ClaudeAPIService()
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                Picker("Input language", selection: $inputLanguage) {
+                    ForEach(InputLanguage.allCases) { language in
+                        Text(language.rawValue).tag(language)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.top, 4)
+                .disabled(speechRecognizer.isRecording || isTranslating)
+
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -26,7 +64,7 @@ struct SpeakView: View {
                                 ContentUnavailableView(
                                     "Tap the mic and speak",
                                     systemImage: "waveform",
-                                    description: Text("Your words get translated to Cantonese automatically.")
+                                    description: Text("Speak \(inputLanguage.apiName) — it gets translated to \(inputLanguage.target.apiName) automatically.")
                                 )
                                 .padding(.top, 60)
                             }
@@ -107,6 +145,9 @@ struct SpeakView: View {
                 finalizeAndTranslate()
             }
         }
+        .onChange(of: inputLanguage) { _, language in
+            speechRecognizer.setLocale(identifier: language.localeIdentifier)
+        }
     }
 
     private func toggleRecording() {
@@ -134,8 +175,8 @@ struct SpeakView: View {
             do {
                 let result = try await apiService.translate(
                     text: spoken,
-                    sourceLanguage: "English",
-                    targetLanguage: "Cantonese"
+                    sourceLanguage: inputLanguage.apiName,
+                    targetLanguage: inputLanguage.target.apiName
                 )
                 messages.append(ChatMessage(
                     isUser: false,

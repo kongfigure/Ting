@@ -6,10 +6,21 @@
 //
 
 import SwiftUI
+import FirebaseCore
 
 @main
 struct TingApp: App {
     @StateObject private var store = LessonStore()
+
+    init() {
+        // Without the plist, FirebaseApp.configure() throws an NSException
+        // and crashes at launch — so only configure when it's present.
+        if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
+            FirebaseApp.configure()
+        } else {
+            print("⚠️ GoogleService-Info.plist missing — Firebase disabled, using local storage")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {

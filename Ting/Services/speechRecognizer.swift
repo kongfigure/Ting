@@ -8,10 +8,22 @@ class SpeechRecognizer: ObservableObject {
     @Published var transcript: String = ""
     @Published var isRecording: Bool = false
 
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
+
+    init(localeIdentifier: String = "en-US") {
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier))
+    }
+
+    func setLocale(identifier: String) {
+        guard !isRecording else { return }
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: identifier))
+        if recognizer == nil {
+            print("❌ SFSpeechRecognizer unavailable for locale \(identifier)")
+        }
+    }
 
     func requestPermissions() async {
         let speechStatus = await withCheckedContinuation { continuation in
