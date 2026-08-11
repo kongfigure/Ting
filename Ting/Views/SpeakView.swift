@@ -84,6 +84,7 @@ struct SpeakView: View {
                 .disabled(isTranslating)
             }
             .navigationTitle("Speak")
+            .toolbar { TingHeader() }
         }
         .task {
             await speechRecognizer.requestPermissions()

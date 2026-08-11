@@ -55,6 +55,7 @@ struct LessonsView: View {
                 .padding(.vertical, 4)
             }
             .navigationTitle("Lessons")
+            .toolbar { TingHeader() }
         }
     }
 }

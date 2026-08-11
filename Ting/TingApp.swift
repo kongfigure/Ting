@@ -18,6 +18,8 @@ struct TingApp: App {
                     .tabItem { Label("Lessons", systemImage: "book") }
                 WordsView()
                     .tabItem { Label("Words", systemImage: "star") }
+                StatsView()
+                    .tabItem { Label("Stats", systemImage: "chart.bar") }
             }
         }
     }

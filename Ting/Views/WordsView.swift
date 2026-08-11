@@ -66,6 +66,7 @@ struct WordsView: View {
                 .padding(.vertical, 4)
             }
             .navigationTitle("Words")
+            .toolbar { TingHeader() }
         }
     }
 }
