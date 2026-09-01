@@ -25,6 +25,19 @@ class SpeechRecognizer: ObservableObject {
         }
     }
 
+    static func logLanguageSupport() {
+        let supported = SFSpeechRecognizer.supportedLocales().map(\.identifier).sorted()
+        print("🎙️ SFSpeechRecognizer supports \(supported.count) locales:")
+        print("   \(supported.joined(separator: ", "))")
+        print("🎙️ Curated language availability:")
+        for language in LearningLanguage.allCases {
+            let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language.localeIdentifier))
+            let available = recognizer?.isAvailable ?? false
+            let onDevice = recognizer?.supportsOnDeviceRecognition ?? false
+            print("   \(language.apiName) [\(language.localeIdentifier)] available=\(available) onDevice=\(onDevice)")
+        }
+    }
+
     func requestPermissions() async {
         let speechStatus = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in

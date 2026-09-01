@@ -8,53 +8,54 @@ struct ChatMessage: Identifiable {
     let isMock: Bool
 }
 
-// Locale verified against SFSpeechRecognizer.supportedLocales():
-// zh-HK = Cantonese (Hong Kong, traditional). yue-Hant-HK is NOT supported.
-enum InputLanguage: String, CaseIterable, Identifiable {
-    case english = "English"
-    case cantonese = "廣東話"
-
-    var id: String { rawValue }
-
-    var localeIdentifier: String {
-        switch self {
-        case .english: return "en-US"
-        case .cantonese: return "zh-HK"
-        }
-    }
-
-    var apiName: String {
-        switch self {
-        case .english: return "English"
-        case .cantonese: return "Cantonese"
-        }
-    }
-
-    var target: InputLanguage {
-        self == .english ? .cantonese : .english
-    }
-}
-
 struct SpeakView: View {
     @EnvironmentObject private var store: LessonStore
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @State private var messages: [ChatMessage] = []
     @State private var isTranslating = false
     @State private var currentLessonID: UUID?
-    @State private var inputLanguage: InputLanguage = .english
+    @AppStorage("learningLanguage") private var learningLanguageRaw = LearningLanguage.cantonese.rawValue
+    @State private var isSpeakingTarget = false
     private let apiService = ClaudeAPIService()
+
+    private var learningLanguage: LearningLanguage {
+        LearningLanguage(rawValue: learningLanguageRaw) ?? .cantonese
+    }
+    private var inputLocaleIdentifier: String {
+        isSpeakingTarget ? learningLanguage.localeIdentifier : "en-US"
+    }
+    private var sourceLanguageName: String {
+        isSpeakingTarget ? learningLanguage.apiName : "English"
+    }
+    private var targetLanguageName: String {
+        isSpeakingTarget ? "English" : learningLanguage.apiName
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Input language", selection: $inputLanguage) {
-                    ForEach(InputLanguage.allCases) { language in
-                        Text(language.rawValue).tag(language)
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Learning")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.textSecondary)
+                    Picker("Language", selection: $learningLanguageRaw) {
+                        ForEach(LearningLanguage.allCases) { language in
+                            Text(language.displayName).tag(language.rawValue)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .tint(Color.primaryAccent)
+                    .fixedSize()
+                    Spacer()
+                }
+                .padding(.horizontal)
+
+                Picker("Speaking", selection: $isSpeakingTarget) {
+                    Text("Speak English").tag(false)
+                    Text("Speak \(learningLanguage.nativeName)").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
-                .padding(.top, 4)
                 .disabled(speechRecognizer.isRecording || isTranslating)
 
                 ScrollViewReader { proxy in
@@ -64,7 +65,7 @@ struct SpeakView: View {
                                 ContentUnavailableView(
                                     "Tap the mic and speak",
                                     systemImage: "waveform",
-                                    description: Text("Speak \(inputLanguage.apiName) — it gets translated to \(inputLanguage.target.apiName) automatically.")
+                                    description: Text("Speak \(sourceLanguageName) — it gets translated to \(targetLanguageName) automatically.")
                                 )
                                 .padding(.top, 60)
                             }
@@ -139,14 +140,21 @@ struct SpeakView: View {
         }
         .task {
             await speechRecognizer.requestPermissions()
+            SpeechRecognizer.logLanguageSupport()
         }
         .onChange(of: speechRecognizer.isRecording) { _, recording in
             if !recording {
                 finalizeAndTranslate()
             }
         }
-        .onChange(of: inputLanguage) { _, language in
-            speechRecognizer.setLocale(identifier: language.localeIdentifier)
+        .onChange(of: learningLanguageRaw) { _, _ in
+            // A lesson belongs to one language, so switching starts a fresh conversation.
+            isSpeakingTarget = false
+            startNewConversation()
+            speechRecognizer.setLocale(identifier: inputLocaleIdentifier)
+        }
+        .onChange(of: isSpeakingTarget) { _, _ in
+            speechRecognizer.setLocale(identifier: inputLocaleIdentifier)
         }
     }
 
@@ -175,8 +183,8 @@ struct SpeakView: View {
             do {
                 let result = try await apiService.translate(
                     text: spoken,
-                    sourceLanguage: inputLanguage.apiName,
-                    targetLanguage: inputLanguage.target.apiName
+                    sourceLanguage: sourceLanguageName,
+                    targetLanguage: targetLanguageName
                 )
                 messages.append(ChatMessage(
                     isUser: false,
@@ -197,7 +205,7 @@ struct SpeakView: View {
                     turn,
                     toLessonID: currentLessonID,
                     category: result.category,
-                    language: "Cantonese"
+                    language: learningLanguage.apiName
                 )
                 currentLessonID = lessonID
                 store.addWords(result.notableWords, category: result.category, lessonID: lessonID)
