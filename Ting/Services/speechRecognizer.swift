@@ -3,6 +3,14 @@ import Speech
 import AVFoundation
 import Combine
 
+enum SpeechRecognizerError: LocalizedError {
+    case unavailable
+
+    var errorDescription: String? {
+        "Speech recognition isn't available for this language on this device."
+    }
+}
+
 @MainActor
 class SpeechRecognizer: ObservableObject {
     @Published var transcript: String = ""
@@ -17,10 +25,19 @@ class SpeechRecognizer: ObservableObject {
         recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier))
     }
 
+    /// Reinitializes the recognizer for a new locale.
+    ///
+    /// Safe to call even while `isRecording` is true: an in-flight
+    /// `SFSpeechRecognitionTask` was started against the *old* recognizer
+    /// instance directly and keeps running unaffected — reassigning
+    /// `recognizer` here only changes what the *next* `startRecording()`
+    /// call uses. (Previously this had a `guard !isRecording` that silently
+    /// dropped the new locale if you switched languages mid-recording, so
+    /// the recognizer stayed stuck on the old language indefinitely.)
     func setLocale(identifier: String) {
-        guard !isRecording else { return }
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: identifier))
-        if recognizer == nil {
+        let newRecognizer = SFSpeechRecognizer(locale: Locale(identifier: identifier))
+        recognizer = newRecognizer
+        if newRecognizer == nil {
             print("❌ SFSpeechRecognizer unavailable for locale \(identifier)")
         }
     }
@@ -49,6 +66,14 @@ class SpeechRecognizer: ObservableObject {
     }
 
     func startRecording() throws {
+        // Previously this force-chained `recognizer?.recognitionTask(...)`, so an
+        // unsupported/nil recognizer silently started the audio engine with no task
+        // ever running — the UI would show "recording" forever with no transcript
+        // and no way to stop automatically. Fail fast instead.
+        guard let recognizer, recognizer.isAvailable else {
+            throw SpeechRecognizerError.unavailable
+        }
+
         task?.cancel()
         task = nil
         transcript = ""
@@ -63,7 +88,7 @@ class SpeechRecognizer: ObservableObject {
 
         let inputNode = audioEngine.inputNode
 
-        task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
+        task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self = self else { return }
             Task { @MainActor in
                 if let result = result {

@@ -5,6 +5,10 @@ import Combine
 final class LessonStore: ObservableObject {
     @Published private(set) var lessons: [Lesson] = []
     @Published private(set) var words: [Word] = []
+    /// True until the first read completes, so views can show a spinner
+    /// instead of a misleading "no lessons yet" empty state while Firestore's
+    /// initial snapshot is still in flight.
+    @Published private(set) var isLoading: Bool = true
 
     // Firestore when GoogleService-Info.plist is present; otherwise falls
     // back to a local JSON file so the app still works without Firebase.
@@ -25,13 +29,17 @@ final class LessonStore: ObservableObject {
             let service = FirebaseService()
             firebase = service
             service.startListening(
-                onLessons: { [weak self] in self?.lessons = $0 },
+                onLessons: { [weak self] in
+                    self?.lessons = $0
+                    self?.isLoading = false
+                },
                 onWords: { [weak self] in self?.words = $0 }
             )
         } else {
             firebase = nil
             print("⚠️ Firebase not configured — using local JSON store")
             loadLocal()
+            isLoading = false
         }
     }
 
@@ -91,12 +99,14 @@ final class LessonStore: ObservableObject {
 
         var day = calendar.startOfDay(for: Date())
         if !activeDays.contains(day) {
-            day = calendar.date(byAdding: .day, value: -1, to: day)!
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: day) else { return 0 }
+            day = yesterday
         }
         var streak = 0
         while activeDays.contains(day) {
             streak += 1
-            day = calendar.date(byAdding: .day, value: -1, to: day)!
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: day) else { break }
+            day = previousDay
         }
         return streak
     }

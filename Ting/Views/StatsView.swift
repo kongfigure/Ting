@@ -16,62 +16,69 @@ struct StatsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    HStack(spacing: 12) {
-                        StatCard(
-                            value: "\(store.streakDays)",
-                            label: "day streak",
-                            systemImage: "flame.fill"
-                        )
-                        StatCard(
-                            value: "\(store.lessons.count)",
-                            label: "conversations",
-                            systemImage: "bubble.left.and.bubble.right.fill"
-                        )
-                        StatCard(
-                            value: "\(store.words.count)",
-                            label: "words saved",
-                            systemImage: "star.fill"
-                        )
-                    }
+            Group {
+                if store.isLoading {
+                    ProgressView("Loading stats…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            HStack(spacing: 12) {
+                                StatCard(
+                                    value: "\(store.streakDays)",
+                                    label: "day streak",
+                                    systemImage: "flame.fill"
+                                )
+                                StatCard(
+                                    value: "\(store.lessons.count)",
+                                    label: "conversations",
+                                    systemImage: "bubble.left.and.bubble.right.fill"
+                                )
+                                StatCard(
+                                    value: "\(store.words.count)",
+                                    label: "words saved",
+                                    systemImage: "star.fill"
+                                )
+                            }
 
-                    if languageStats.isEmpty {
-                        ContentUnavailableView(
-                            "No progress yet",
-                            systemImage: "chart.bar",
-                            description: Text("Start speaking and your progress will show up here.")
-                        )
-                        .padding(.top, 40)
-                    } else {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Language progress")
-                                .font(.headline)
-                                .foregroundStyle(Color.textPrimary)
+                            if languageStats.isEmpty {
+                                ContentUnavailableView(
+                                    "No progress yet",
+                                    systemImage: "chart.bar",
+                                    description: Text("Start speaking and your progress will show up here.")
+                                )
+                                .padding(.top, 40)
+                            } else {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Language progress")
+                                        .font(.headline)
+                                        .foregroundStyle(Color.textPrimary)
 
-                            ForEach(languageStats, id: \.name) { stat in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text(stat.name)
-                                            .font(.headline)
-                                            .foregroundStyle(Color.textPrimary)
-                                        Spacer()
-                                        Text(levelLabel(stat.progress))
-                                            .font(.caption)
-                                            .foregroundStyle(Color.textSecondary)
+                                    ForEach(languageStats, id: \.name) { stat in
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text(stat.name)
+                                                    .font(.headline)
+                                                    .foregroundStyle(Color.textPrimary)
+                                                Spacer()
+                                                Text(levelLabel(stat.progress))
+                                                    .font(.caption)
+                                                    .foregroundStyle(Color.textSecondary)
+                                            }
+                                            ProgressView(value: stat.progress)
+                                                .tint(Color.primaryAccent)
+                                            Text("\(stat.phrases) phrase\(stat.phrases == 1 ? "" : "s") spoken")
+                                                .font(.caption)
+                                                .foregroundStyle(Color.textSecondary)
+                                        }
+                                        .cardStyle()
                                     }
-                                    ProgressView(value: stat.progress)
-                                        .tint(Color.primaryAccent)
-                                    Text("\(stat.phrases) phrase\(stat.phrases == 1 ? "" : "s") spoken")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.textSecondary)
                                 }
-                                .cardStyle()
                             }
                         }
+                        .padding()
                     }
                 }
-                .padding()
             }
             .background(Color.appBackground)
             .navigationTitle("Stats")

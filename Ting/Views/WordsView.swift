@@ -6,7 +6,10 @@ struct WordsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.words.isEmpty {
+                if store.isLoading {
+                    ProgressView("Loading words…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if store.words.isEmpty {
                     ContentUnavailableView(
                         "No words yet",
                         systemImage: "star",

@@ -5,7 +5,6 @@ struct ChatMessage: Identifiable {
     let isUser: Bool
     let text: String
     let romanization: String?
-    let isMock: Bool
 }
 
 struct SpeakView: View {
@@ -13,7 +12,9 @@ struct SpeakView: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @State private var messages: [ChatMessage] = []
     @State private var isTranslating = false
+    @State private var translationError: String?
     @State private var currentLessonID: UUID?
+    @State private var pendingRetryText: String?
     @AppStorage("learningLanguage") private var learningLanguageRaw = LearningLanguage.cantonese.rawValue
     @State private var isSpeakingTarget = false
     private let apiService = ClaudeAPIService()
@@ -46,6 +47,7 @@ struct SpeakView: View {
                     .pickerStyle(.menu)
                     .tint(Color.primaryAccent)
                     .fixedSize()
+                    .disabled(speechRecognizer.isRecording || isTranslating)
                     Spacer()
                 }
                 .padding(.horizontal)
@@ -79,11 +81,23 @@ struct SpeakView: View {
                                 ChatBubble(message: ChatMessage(
                                     isUser: true,
                                     text: speechRecognizer.transcript,
-                                    romanization: nil,
-                                    isMock: false
+                                    romanization: nil
                                 ))
                                 .opacity(0.6)
                                 .id("live")
+                            }
+
+                            if let translationError {
+                                Button(action: retryTranslation) {
+                                    Label(translationError, systemImage: "arrow.clockwise.circle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.accentDeep)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(pendingRetryText == nil || isTranslating)
+                                .padding(.horizontal)
+                                .id("error")
                             }
 
                             if isTranslating {
@@ -162,12 +176,22 @@ struct SpeakView: View {
         if speechRecognizer.isRecording {
             speechRecognizer.stopRecording()
         } else {
-            try? speechRecognizer.startRecording()
+            do {
+                try speechRecognizer.startRecording()
+            } catch {
+                // Previously `try?` swallowed this — an unsupported locale or
+                // AVAudioSession failure (e.g. mic permission denied) failed
+                // completely silently, with no feedback that recording never started.
+                translationError = error.localizedDescription
+                pendingRetryText = nil
+            }
         }
     }
 
     private func startNewConversation() {
         messages = []
+        translationError = nil
+        pendingRetryText = nil
         currentLessonID = nil
     }
 
@@ -176,7 +200,24 @@ struct SpeakView: View {
         guard !spoken.isEmpty, !isTranslating else { return }
         speechRecognizer.transcript = ""
 
-        messages.append(ChatMessage(isUser: true, text: spoken, romanization: nil, isMock: false))
+        messages.append(ChatMessage(isUser: true, text: spoken, romanization: nil))
+        translate(spoken)
+    }
+
+    private func retryTranslation() {
+        guard let spoken = pendingRetryText, !isTranslating else { return }
+        translate(spoken)
+    }
+
+    /// Runs the Claude translate() call and applies its result, or — on any
+    /// failure (network error, non-2xx response, malformed/empty JSON) —
+    /// shows a friendly "tap to retry" message instead of leaving the
+    /// "Translating…" spinner up forever or failing silently. Kept separate
+    /// from finalizeAndTranslate so retrying doesn't re-append the user's
+    /// message bubble.
+    private func translate(_ spoken: String) {
+        translationError = nil
+        pendingRetryText = nil
         isTranslating = true
 
         Task {
@@ -189,8 +230,7 @@ struct SpeakView: View {
                 messages.append(ChatMessage(
                     isUser: false,
                     text: result.translatedText,
-                    romanization: result.romanization,
-                    isMock: false
+                    romanization: result.romanization
                 ))
 
                 let turn = ConversationTurn(
@@ -210,16 +250,9 @@ struct SpeakView: View {
                 currentLessonID = lessonID
                 store.addWords(result.notableWords, category: result.category, lessonID: lessonID)
             } catch {
-                // ⚠️ DEMO FALLBACK: shows canned fake data if the API fails.
-                // Intentionally NOT saved to the store so real lessons stay real.
-                print("❌ Translate failed, using mock: \(error.localizedDescription)")
-                let mock = ClaudeAPIService.mockResult(for: spoken)
-                messages.append(ChatMessage(
-                    isUser: false,
-                    text: mock.translatedText,
-                    romanization: mock.romanization,
-                    isMock: true
-                ))
+                print("❌ Translate failed: \(error.localizedDescription)")
+                translationError = "Translation failed — tap to retry"
+                pendingRetryText = spoken
             }
             isTranslating = false
         }
@@ -241,12 +274,6 @@ struct ChatBubble: View {
                     Text(romanization)
                         .font(.caption)
                         .foregroundStyle(message.isUser ? Color.white.opacity(0.8) : Color.textSecondary)
-                }
-
-                if message.isMock {
-                    Label("demo data", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
                 }
             }
             .padding(.horizontal, 14)

@@ -38,6 +38,7 @@ struct ClaudeAPIResponse: Codable {
 
 enum ClaudeAPIError: LocalizedError {
     case missingAPIKey
+    case invalidURL
     case httpError(status: Int, body: String)
     case malformedResponse
 
@@ -45,6 +46,8 @@ enum ClaudeAPIError: LocalizedError {
         switch self {
         case .missingAPIKey:
             return "CLAUDE_API_KEY is empty — check Secrets.xcconfig / Info.plist wiring."
+        case .invalidURL:
+            return "Internal error: invalid Claude API URL."
         case .httpError(let status, let body):
             return "Claude API returned HTTP \(status): \(body)"
         case .malformedResponse:
@@ -63,7 +66,9 @@ class ClaudeAPIService {
     func translate(text: String, sourceLanguage: String, targetLanguage: String) async throws -> TranslationResult {
         guard !apiKey.isEmpty else { throw ClaudeAPIError.missingAPIKey }
 
-        let url = URL(string: "https://api.anthropic.com/v1/messages")!
+        guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
+            throw ClaudeAPIError.invalidURL
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
@@ -121,23 +126,5 @@ class ClaudeAPIService {
         }
 
         return try JSONDecoder().decode(TranslationResult.self, from: jsonData)
-    }
-
-    // ⚠️ DEMO FALLBACK — FAKE DATA. Returned when the real API call fails
-    // (e.g. no API credits). Remove before shipping anything real.
-    static func mockResult(for text: String) -> TranslationResult {
-        TranslationResult(
-            translatedText: "唔該，兩籠蝦餃同一籠燒賣。",
-            romanization: "m4 goi1, loeng5 lung4 haa1 gaau2 tung4 jat1 lung4 siu1 maai2",
-            category: "food",
-            notableWords: [
-                NotableWord(
-                    word: "蝦餃",
-                    romanization: "haa1 gaau2",
-                    meaning: "shrimp dumpling (har gow)",
-                    usageNote: "Classic dim sum order — measure word is 籠 (steamer basket)."
-                )
-            ]
-        )
     }
 }

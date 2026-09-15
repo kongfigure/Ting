@@ -6,7 +6,10 @@ struct LessonsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.lessons.isEmpty {
+                if store.isLoading {
+                    ProgressView("Loading lessons…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if store.lessons.isEmpty {
                     ContentUnavailableView(
                         "No lessons yet",
                         systemImage: "book",
